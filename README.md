@@ -8,7 +8,7 @@ Script for creating empty CRLs signed by RSA or ECC (for ECDSA) certificates.
 Using `pipx` (`pip` will also work, but will complain if you are outside a virtual environment on certain distributions):
 
 ```sh
-pipx install git+https://github.com/suut/make-crl.git
+pipx install make-crl
 ```
 
 The `openssl` commandline tool is required.
