@@ -57,5 +57,5 @@ the `--provider` argument and the `PKCS11_PROVIDER_MODULE` environment variable.
 
 You will be prompted for the PIN code or the passphrase if necessary.
 
-Use `pkcs11-tool -O --module "$PKCS11_PROVIDER_MODULE"` with the same `PKCS11_PROVIDER_MODULE` variable as defined above
+Use `pkcs11-tool -O -l --module "$PKCS11_PROVIDER_MODULE"` with the same `PKCS11_PROVIDER_MODULE` variable as defined above
 in order to determine the PKCS#11 URI to use.
