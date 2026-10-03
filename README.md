@@ -59,3 +59,12 @@ You will be prompted for the PIN code or the passphrase if necessary.
 
 Use `pkcs11-tool -O -l --module "$PKCS11_PROVIDER_MODULE"` with the same `PKCS11_PROVIDER_MODULE` variable as defined above
 in order to determine the PKCS#11 URI to use.
+
+## Extra options
+
+By default the `nextUpdate` field of the CRL is the same as the expiration date of the certificate.
+
+You can give the `--next-update +N` argument to have it in `N` days from now, or give an exact time under the form
+`--next-update YYMMDDhhmmss` in UTC time.
+
+By default `sha256` is used, but you can give the values `sha1`, `sha224`, `sha256`, `sha384` or `sha512` to the `--digest` option.

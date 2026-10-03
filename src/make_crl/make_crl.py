@@ -3,19 +3,23 @@
 import pyasn1.codec.der.encoder
 import pyasn1.codec.der.decoder
 import pyasn1.type.univ
+import pyasn1.type.useful
+import pyasn1.error
 
 import pyasn1_modules.rfc5280
 
 import subprocess
 import sys
 import argparse
+import datetime
 from pathlib import Path
 
 
 def app():
     parser = argparse.ArgumentParser(description='Make an empty CRL from a certificate and a key')
-    parser.add_argument('--digest', choices=('sha1', 'sha256', 'sha384'), default='sha256', help='Digest for signing the CRL (default %(default)s)')
+    parser.add_argument('--digest', choices=('sha1', 'sha224', 'sha256', 'sha384', 'sha512'), default='sha256', help='Digest for signing the CRL (default %(default)s)')
     parser.add_argument('--provider', default=None, help='OpenSSL provider (default none)')
+    parser.add_argument('--next-update', default=None, help='CRL nextUpdate, specify under the form YYMMDDhhmmss or +N where N is a number of days (default: when certificate expires)')
     parser.add_argument('certificate', help='The certificate file or PKCS#11 URI')
     parser.add_argument('key', help='The private key or PKCS#11 URI')
     parser.add_argument('outfile', help='The file in which to output the CRL')
@@ -41,10 +45,10 @@ def app():
 
     try:
         out = subprocess.run(['openssl', 'x509', *provider_args, '-in', args.certificate, '-outform', 'DER'], check=True, capture_output=True)
-    except Exception as e:
+    except subprocess.CalledProcessError as e:
         print('Error calling openssl to retrieve certificate:', file=sys.stderr)
-        print(e.stderr.decode('utf-8'), file=sys.stderr)
-        raise
+        print(e.stderr.decode('utf-8'), file=sys.stderr, end='')
+        sys.exit(1)
 
     signing_cert_bytes = out.stdout
     signing_cert, _ = pyasn1.codec.der.decoder.decode(signing_cert_bytes, asn1Spec=pyasn1_modules.rfc5280.Certificate())
@@ -78,8 +82,26 @@ def app():
         sys.exit(f'Unsupported key algorithm {key_algo}')
 
     subject = signing_cert['tbsCertificate']['subject']
-    not_before = signing_cert['tbsCertificate']['validity']['notBefore']
-    not_after = signing_cert['tbsCertificate']['validity']['notAfter']
+
+    if args.next_update is None:
+        not_after = signing_cert['tbsCertificate']['validity']['notAfter']
+    elif args.next_update.startswith('+'):
+        not_after = pyasn1_modules.rfc5280.Time()
+        try:
+            not_after['utcTime'] = (datetime.datetime.now().astimezone(datetime.timezone.utc) + datetime.timedelta(days=int(args.next_update[1:]))).strftime('%y%m%d%H%M%SZ')
+            pyasn1.codec.der.encoder.encode(not_after)  # test encoding
+        except (ValueError, pyasn1.error.PyAsn1Error):
+            sys.exit(f'Invalid number of days {args.next_update[1:]}')
+    else:
+        not_after = pyasn1_modules.rfc5280.Time()
+        try:
+            not_after['utcTime'] = pyasn1.type.useful.UTCTime(args.next_update + 'Z')
+            pyasn1.codec.der.encoder.encode(not_after)  # test encoding
+        except pyasn1.error.PyAsn1Error:
+            sys.exit(f'Invalid date/time specifier {args.next_update}')
+
+    not_before = pyasn1_modules.rfc5280.Time()
+    not_before['utcTime'] = datetime.datetime.now().astimezone(datetime.timezone.utc).strftime('%y%m%d%H%M%SZ')
 
     cert_list = pyasn1_modules.rfc5280.TBSCertList()
 
@@ -93,10 +115,10 @@ def app():
 
     try:
         out = subprocess.run(['openssl', 'pkeyutl', *provider_args, '-sign', '-inkey', args.key, '-rawin', '-digest', args.digest], check=True, input=to_be_signed_der, capture_output=True)
-    except Exception as e:
+    except subprocess.CalledProcessError as e:
         print('Error calling openssl to sign CRL:', file=sys.stderr)
-        print(e.stderr.decode('utf-8'), file=sys.stderr)
-        raise
+        print(e.stderr.decode('utf-8'), file=sys.stderr, end='')
+        sys.exit(1)
 
     signature = out.stdout
 
