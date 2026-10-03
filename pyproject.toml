@@ -4,16 +4,23 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "make-crl"
-version = "1.0.0"
+version = "0.1.0"
 authors = [
+  { name="suut", email="contact@suut.in" },
+]
+maintainers = [
   { name="suut", email="contact@suut.in" },
 ]
 description = "CRL creation script"
 readme = "README.md"
+keywords = ["crl", "rfc5280", "x509", "pki"]
 requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
+    "License :: OSI Approved :: MIT License",
+    "Development Status :: 4 - Beta",
+    "Topic :: Security :: Cryptography"
 ]
 license = "MIT"
 license-files = ["LICEN[CS]E*"]
