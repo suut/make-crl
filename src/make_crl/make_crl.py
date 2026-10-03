@@ -34,7 +34,18 @@ def app():
     ECDSA_SHA384_SIGNATURE = pyasn1.type.univ.ObjectIdentifier('1.2.840.10045.4.3.3')
     ECDSA_SHA512_SIGNATURE = pyasn1.type.univ.ObjectIdentifier('1.2.840.10045.4.3.4')
 
-    out = subprocess.run(['openssl', 'x509', '-in', args.certificate, '-outform', 'DER'], check=True, capture_output=True)
+    if args.provider is not None:
+        provider_args = ['-provider', 'default', '-provider', args.provider]
+    else:
+        provider_args = []
+
+    try:
+        out = subprocess.run(['openssl', 'x509', *provider_args, '-in', args.certificate, '-outform', 'DER'], check=True, capture_output=True)
+    except Exception as e:
+        print('Error calling openssl to retrieve certificate:', file=sys.stderr)
+        print(e.stderr.decode('utf-8'), file=sys.stderr)
+        raise
+
     signing_cert_bytes = out.stdout
     signing_cert, _ = pyasn1.codec.der.decoder.decode(signing_cert_bytes, asn1Spec=pyasn1_modules.rfc5280.Certificate())
 
@@ -80,10 +91,13 @@ def app():
 
     to_be_signed_der = pyasn1.codec.der.encoder.encode(cert_list)
 
-    provider_args = []
-    if args.provider is not None:
-        provider_args += ['-provider', 'default', '-provider', args.provider]
-    out = subprocess.run(['openssl', 'pkeyutl', *provider_args, '-sign', '-inkey', args.key, '-rawin', '-digest', args.digest], check=True, input=to_be_signed_der, capture_output=True)
+    try:
+        out = subprocess.run(['openssl', 'pkeyutl', *provider_args, '-sign', '-inkey', args.key, '-rawin', '-digest', args.digest], check=True, input=to_be_signed_der, capture_output=True)
+    except Exception as e:
+        print('Error calling openssl to sign CRL:', file=sys.stderr)
+        print(e.stderr.decode('utf-8'), file=sys.stderr)
+        raise
+
     signature = out.stdout
 
     signed_cert_list = pyasn1_modules.rfc5280.CertificateList()
