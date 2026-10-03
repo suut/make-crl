@@ -1,7 +1,7 @@
 CRL creation script
 --------------
 
-Script for creating empty CRLs signed by RSA certificates.
+Script for creating empty CRLs signed by RSA or ECC (for ECDSA) certificates.
 
 # Installation
 
