@@ -145,6 +145,7 @@ def app():
         cert_list['signature'] = sig_algo
         if cert_list['issuer'] != subject:
             sys.exit('Input CRL is not signed by the same certificate')
+        last_update = cert_list['thisUpdate']
         cert_list['thisUpdate'] = not_before
         cert_list['nextUpdate'] = not_after
         for i, ext in enumerate(cert_list['crlExtensions']):
@@ -167,6 +168,7 @@ def app():
         last_was_indirect = False
         for cert in cert_list['revokedCertificates']:
             previously_revoked.add(int(cert['userCertificate']))
+            last_was_indirect = False
             for ext in cert['crlEntryExtensions']:
                 if ext['extnID'] == pyasn1_modules.rfc5280.id_ce_certificateIssuer:
                     dn, _ = pyasn1.codec.der.decoder.decode(ext['extnValue'], asn1Spec=pyasn1_modules.rfc5280.GeneralNames())
@@ -230,5 +232,5 @@ def app():
         Path(args.outfile).write_bytes(pyasn1.codec.der.encoder.encode(signed_cert_list))
     else:
         outfile = Path(args.crl)
-        outfile.replace(outfile.with_name(outfile.name + '.old'))
+        outfile.rename(outfile.with_name(outfile.name + '.old-' + str(last_update['utcTime']).rstrip('Z')))
         outfile.write_bytes(pyasn1.codec.der.encoder.encode(signed_cert_list))
