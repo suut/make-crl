@@ -8,3 +8,4 @@ __pycache__/
 *.cer
 *.crl
 *.key
+*.crl.old-*
