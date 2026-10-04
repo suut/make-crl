@@ -1,7 +1,7 @@
 CRL creation script
 --------------
 
-Script for creating empty CRLs signed by RSA or ECC (for ECDSA) certificates.
+Script for creating CRLs signed by RSA or ECC (for ECDSA) certificates for micro-CA purposes, to replace the horrendous `openssl ca` command.
 
 # Installation
 
@@ -19,7 +19,7 @@ The `openssl` commandline tool is required.
 
 `--help` output:
 ```
-usage: python3 -m make_crl [-h] [--digest {sha1,sha224,sha256,sha384,sha512}] [--provider PROVIDER] [--next-update NEXT_UPDATE] SUBCOMMAND ...
+usage: make-crl [-h] [--digest {sha1,sha224,sha256,sha384,sha512}] [--provider PROVIDER] [--next-update NEXT_UPDATE] SUBCOMMAND ...
 
 Make an empty CRL from a certificate and a key
 
@@ -41,7 +41,7 @@ The generic arguments `--digest`, `--provider`, `--next-update` must come before
 
 `make-empty` subcommand:
 ```
-usage: python3 -m make_crl make-empty [-h] [-n CRL_NUMBER] certificate key outfile
+usage: make-crl make-empty [-h] [-n CRL_NUMBER] certificate key outfile
 
 positional arguments:
   certificate           The certificate file or PKCS#11 URI
@@ -56,7 +56,7 @@ options:
 
 `revoke` subcommand:
 ```
-usage: python3 -m make_crl revoke [-h]
+usage: make-crl revoke [-h]
                                   [-r {unspecified,keyCompromise,cACompromise,affiliationChanged,superseded,cessationOfOperation,certificateHold,privilegeWithdrawn,aACompromise}]
                                   certificate key crl to-revoke [to-revoke ...]
 

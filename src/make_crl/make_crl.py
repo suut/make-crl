@@ -141,7 +141,7 @@ def app():
         previous_crl, _ = pyasn1.codec.der.decoder.decode(Path(args.crl).read_bytes(), asn1Spec=pyasn1_modules.rfc5280.CertificateList())
         cert_list = previous_crl['tbsCertList']
         if cert_list['version'] != 1:
-            sys.exit('Expected CRL versin 2')
+            sys.exit('Expected CRL version 2')
         cert_list['signature'] = sig_algo
         if cert_list['issuer'] != subject:
             sys.exit('Input CRL is not signed by the same certificate')
@@ -156,7 +156,7 @@ def app():
                     sys.exit('Authority key identifier does not match certificate')
             elif ext['extnID'] == pyasn1_modules.rfc5280.id_ce_cRLNumber:
                 if ext['critical'] != True:
-                    sys.exit('AKID extension is not marked as critical in input CRL')
+                    sys.exit('CRL number extension is not marked as critical in input CRL')
                 current_number, _ = pyasn1.codec.der.decoder.decode(ext['extnValue'], asn1Spec=pyasn1_modules.rfc5280.CRLNumber())
                 cert_list['crlExtensions'][i]['extnValue'] = pyasn1.codec.der.encoder.encode(current_number + 1)
     else:
@@ -188,7 +188,7 @@ def app():
             if last_was_indirect or cert['tbsCertificate']['issuer'] != subject:
                 dn = pyasn1_modules.rfc5280.GeneralNames()
                 if cert['tbsCertificate']['issuer'] != subject:
-                    print(f'Warning: {cert_file} is not issued by the current CA, treating it as indirect CRL')
+                    print(f'Notice: {cert_file} is not issued by the current CA, treating it as indirect CRL', file=sys.stderr)
                     dn[0]['directoryName']['rdnSequence'] = cert['tbsCertificate']['subject']['rdnSequence']
                 else:
                     dn[0]['directoryName']['rdnSequence'] = subject['rdnSequence']
