@@ -17,7 +17,7 @@ from pathlib import Path
 
 
 def app():
-    parser = argparse.ArgumentParser(description='Make an empty CRL from a certificate and a key')
+    parser = argparse.ArgumentParser(description='Create and populate CRLs from a certificate and a key')
     parser.add_argument('--digest', choices=('sha1', 'sha224', 'sha256', 'sha384', 'sha512'), default='sha256', help='Digest for signing the CRL (default %(default)s)')
     parser.add_argument('--provider', default=None, help='OpenSSL provider (default none)')
     parser.add_argument('--next-update', default=None, help='CRL nextUpdate, specify under the form YYMMDDhhmmss or +N where N is a number of days (default: when certificate expires)')
@@ -189,7 +189,7 @@ def app():
                 dn = pyasn1_modules.rfc5280.GeneralNames()
                 if cert['tbsCertificate']['issuer'] != subject:
                     print(f'Notice: {cert_file} is not issued by the current CA, treating it as indirect CRL', file=sys.stderr)
-                    dn[0]['directoryName']['rdnSequence'] = cert['tbsCertificate']['subject']['rdnSequence']
+                    dn[0]['directoryName']['rdnSequence'] = cert['tbsCertificate']['issuer']['rdnSequence']
                 else:
                     dn[0]['directoryName']['rdnSequence'] = subject['rdnSequence']
 

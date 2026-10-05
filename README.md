@@ -21,7 +21,7 @@ The `openssl` commandline tool is required.
 ```
 usage: make-crl [-h] [--digest {sha1,sha224,sha256,sha384,sha512}] [--provider PROVIDER] [--next-update NEXT_UPDATE] SUBCOMMAND ...
 
-Make an empty CRL from a certificate and a key
+Create and populate CRLs from a certificate and a key
 
 options:
   -h, --help            show this help message and exit
@@ -129,6 +129,8 @@ You can give the `--next-update +N` argument to have it in `N` days from now, or
 `--next-update YYMMDDhhmmss` in UTC time.
 
 By default `sha256` is used, but you can give the values `sha1`, `sha224`, `sha256`, `sha384` or `sha512` to the `--digest` option.
+
+With RSA >= 3072 or with P-384 or higher size curves you should probably use `sha384`.
 
 ## Revocating certificates
 
