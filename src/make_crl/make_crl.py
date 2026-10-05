@@ -27,6 +27,11 @@ def app():
     revoke_parser = subparsers.add_parser('revoke', help='Revoke a certificate')
 
     make_empty_parser.add_argument('-n', '--crl-number', default=1, type=int, help='Initial CRL number (default %(default)s)')
+    make_empty_parser.add_argument('-i', '--indirect', default=False, action='store_true', help='Make an indirect CRL')
+    cert_type_group = make_empty_parser.add_mutually_exclusive_group()
+    cert_type_group.add_argument('-u', '--user-certs', default=False, action='store_true', help='CRL only contains user certificates')
+    cert_type_group.add_argument('-c', '--ca-certs', default=False, action='store_true', help='CRL only contains CA certificates')
+    make_empty_parser.add_argument('-r', '--reasons', default=None, help='Comma-separated list of revocation reasons in the CRL (see `make-crl revoke --help` for the reasons)')
     make_empty_parser.add_argument('certificate', help='The certificate file or PKCS#11 URI')
     make_empty_parser.add_argument('key', help='The private key or PKCS#11 URI')
     make_empty_parser.add_argument('outfile', help='The file in which to output the CRL')
@@ -137,6 +142,24 @@ def app():
         cert_list['crlExtensions'][1]['extnID'] = pyasn1_modules.rfc5280.id_ce_cRLNumber
         cert_list['crlExtensions'][1]['critical'] = True
         cert_list['crlExtensions'][1]['extnValue'] = pyasn1.codec.der.encoder.encode(pyasn1_modules.rfc5280.CRLNumber(args.crl_number))
+        if args.indirect or args.user_certs or args.ca_certs or args.reasons is not None:
+            idp = pyasn1_modules.rfc5280.IssuingDistributionPoint()
+            if args.indirect:
+                idp['indirectCRL'] = True
+            if args.user_certs:
+                idp['onlyContainsUserCerts'] = True
+            if args.ca_certs:
+                idp['onlyContainsCACerts'] = True
+            if args.reasons is not None:
+                reasons = [pyasn1_modules.rfc5280.ReasonFlags.namedValues[r.strip()] for r in args.reasons.split(',')]
+                reasons_bitstring = 9 * ['0']
+                for reason in reasons:
+                    reasons_bitstring[reason] = '1'
+                idp['onlySomeReasons'] = ''.join(reasons_bitstring)
+            cert_list['crlExtensions'][2]['extnID'] = pyasn1_modules.rfc5280.id_ce_issuingDistributionPoint
+            cert_list['crlExtensions'][2]['critical'] = True
+            cert_list['crlExtensions'][2]['extnValue'] = pyasn1.codec.der.encoder.encode(idp)
+
     elif args.subcommand == 'revoke':
         previous_crl, _ = pyasn1.codec.der.decoder.decode(Path(args.crl).read_bytes(), asn1Spec=pyasn1_modules.rfc5280.CertificateList())
         cert_list = previous_crl['tbsCertList']
@@ -148,6 +171,7 @@ def app():
         last_update = cert_list['thisUpdate']
         cert_list['thisUpdate'] = not_before
         cert_list['nextUpdate'] = not_after
+        is_indirect = False
         for i, ext in enumerate(cert_list['crlExtensions']):
             if ext['extnID'] == pyasn1_modules.rfc5280.id_ce_authorityKeyIdentifier:
                 if ext['critical'] != True:
@@ -159,10 +183,10 @@ def app():
                     sys.exit('CRL number extension is not marked as critical in input CRL')
                 current_number, _ = pyasn1.codec.der.decoder.decode(ext['extnValue'], asn1Spec=pyasn1_modules.rfc5280.CRLNumber())
                 cert_list['crlExtensions'][i]['extnValue'] = pyasn1.codec.der.encoder.encode(current_number + 1)
-    else:
-        sys.exit('Invalid subcommand')
+            elif ext['extnID'] == pyasn1_modules.rfc5280.id_ce_issuingDistributionPoint:
+                idp, _ = pyasn1.codec.der.decoder.decode(ext['extnValue'], asn1Spec=pyasn1_modules.rfc5280.IssuingDistributionPoint())
+                is_indirect = bool(idp['indirectCRL'])
 
-    if args.subcommand == 'revoke':
         # Build the list of serial numbers that are already revoked so we do not make duplicates
         previously_revoked = set()
         last_was_indirect = False
@@ -188,7 +212,8 @@ def app():
             if last_was_indirect or cert['tbsCertificate']['issuer'] != subject:
                 dn = pyasn1_modules.rfc5280.GeneralNames()
                 if cert['tbsCertificate']['issuer'] != subject:
-                    print(f'Notice: {cert_file} is not issued by the current CA, treating it as indirect CRL', file=sys.stderr)
+                    if not is_indirect:
+                        sys.exit(f'Error: {cert_file} is not issued by the current CA, but the CRL was not created as an indirect CRL')
                     dn[0]['directoryName']['rdnSequence'] = cert['tbsCertificate']['issuer']['rdnSequence']
                 else:
                     dn[0]['directoryName']['rdnSequence'] = subject['rdnSequence']

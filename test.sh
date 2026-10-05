@@ -35,7 +35,7 @@ openssl req -new -x509 -CA ecc-ca2.pem -CAkey ecc-ca2.key -newkey EC -pkeyopt ec
     -subj '/CN=Leaf 1 CA 2' -set_serial 0x04 -addext basicConstraints=critical,CA:FALSE
 
 echo '=== Make an empty CRL'
-make-crl make-empty rsa-ca1.pem rsa-ca1.key rsa-ca1.crl || exit 1
+make-crl make-empty --indirect rsa-ca1.pem rsa-ca1.key rsa-ca1.crl || exit 1
 openssl crl -noout -text < rsa-ca1.crl || exit 1
 
 echo '=== Revoke the first certificate; with unspecified reason'
@@ -59,7 +59,7 @@ openssl crl -noout -verify -CAfile rsa-ca1.pem < rsa-ca1.crl || exit 1
 
 echo '=== Try to revoke all certificates at the same time now; with reason keyCompromise'
 rm rsa-ca1.crl
-make-crl make-empty rsa-ca1.pem rsa-ca1.key rsa-ca1.crl || exit 1
+make-crl make-empty --indirect rsa-ca1.pem rsa-ca1.key rsa-ca1.crl || exit 1
 openssl crl -noout -text < rsa-ca1.crl || exit 1
 make-crl revoke --reason keyCompromise rsa-ca1.pem rsa-ca1.key rsa-ca1.crl leaf1-ca1.pem leaf1-ca2.pem leaf2-ca1.pem leaf3-ca1.pem || exit 1
 openssl crl -noout -text < rsa-ca1.crl || exit 1
